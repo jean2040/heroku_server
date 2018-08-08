@@ -45,6 +45,13 @@ import http.server
 import requests
 import os
 from urllib.parse import unquote, parse_qs
+import threading
+from socketserver import ThreadingMixIn
+
+
+class ThreadHTTPServer(ThreadingMixIn, http.server.HTTPServer):
+    "Supporting thread-based concurrency"
+
 
 memory = {}
 
@@ -96,7 +103,7 @@ class Shortener(http.server.BaseHTTPRequestHandler):
             if name in memory:
                 # 2. Send a 303 redirect to the long URI in memory[name].
                 self.send_response(303)
-                self.send_header('Location',memory[name])
+                self.send_header('Location', memory[name])
                 self.end_headers
                 #    Delete the following line.
                 '''raise NotImplementedError("Step 2 isn't written yet.")'''
@@ -153,12 +160,14 @@ class Shortener(http.server.BaseHTTPRequestHandler):
             self.send_header('Location', '/')
             self.send_header('Content-type', 'text/plain; charset=utf-8')
             self.end_headers()
-            self.wfile.write("Couldn't fetch URI '{}'. Sorry!".format(longuri).encode())
+            self.wfile.write(
+                "Couldn't fetch URI '{}'. Sorry!".format(longuri).encode())
             #    Delete the following line.
             '''raise NotImplementedError("Step 5 isn't written yet!")'''
 
+
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT',8000))
+    port = int(os.environ.get('PORT', 8000))
     server_address = ('', port)
-    httpd = http.server.HTTPServer(server_address, Shortener)
+    httpd = ThreadHTTPServer(server_address, Shortener)
     httpd.serve_forever()
